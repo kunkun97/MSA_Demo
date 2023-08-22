@@ -1,0 +1,38 @@
+pipeline {
+    agent any
+    environment {
+        backendEcrRepo = '865868930079.dkr.ecr.ap-southeast-1.amazonaws.com/sd5130/backend'
+        frontendEcrRepo = '865868930079.dkr.ecr.ap-southeast-1.amazonaws.com/sd5130/frontend'
+        awsRegion = 'ap-southeast-1'
+    }
+    stages {
+        stage('Build Backend') {
+            steps {
+                dir('backend') {
+                    script {
+                        sh 'docker build -t 865868930079.dkr.ecr.ap-southeast-1.amazonaws.com/sd5130/backend:latest .'
+                    }
+                }
+            }
+        }
+        stage('Build Frontend') {
+            steps {
+                dir('frontend') {
+                    script {
+                        sh 'docker build -t 865868930079.dkr.ecr.ap-southeast-1.amazonaws.com/sd5130/frontend:latest .'
+                    }
+                }
+            }
+        }
+        stage('Push to ECR') {
+            steps {
+                withAWS(region: 'ap-southeast-1', credentials: 'AWS Cred') {
+                    sh "aws ecr get-login-password --region ap-southeast-1 | sudo docker login --username AWS --password-stdin ${backendEcrRepo}"
+                    sh "docker push ${backendEcrRepo}:latest"
+                    sh "aws ecr get-login-password --region ap-southeast-1 | sudo docker login --username AWS --password-stdin ${frontendEcrRepo}"
+                    sh "docker push ${frontendEcrRepo}:latest"
+                }
+            }
+        }
+    }
+}
